@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Culinary: Neo Mech Edition</title>
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-pink: #ff007f;
+            --neon-purple: #9400d3;
+            --dark-bg: #0a0a12;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 10px;
+            touch-action: none;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 850px;
+            height: 95vh;
+            max-height: 720px;
+            background: linear-gradient(135deg, #121225 0%, #1c1c3a 100%);
+            border: 3px solid var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            background: rgba(10, 10, 18, 0.98);
+            z-index: 20;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-purple);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            color: var(--neon-pink);
+            margin-bottom: 25px;
+            text-shadow: 0 0 5px var(--neon-pink);
+        }
+
+        .instructions-box {
+            background: rgba(255, 255, 255, 0.04);
+            border-left: 4px solid var(--neon-pink);
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+            max-width: 580px;
+            text-align: left;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .instructions-box ul { margin: 8px 0 0 20px; }
+        .instructions-box li { margin-bottom: 8px; }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 14px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,240,255,0.2);
+        }
+
+        .btn:hover, .btn:active { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px var(--neon-cyan); }
+
+        /* HUD */
+        #hud {
+            height: 50px;
+            background: rgba(18, 18, 37, 0.9);
+            border-bottom: 2px solid var(--neon-purple);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .hud-item { font-size: 1.1rem; font-weight: bold; }
+        .hud-item span { color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan); }
+
+        /* Gameplay Area */
+        #main-area {
+            height: calc(100% - 50px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #customers-row {
+            height: 38%;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            padding: 10px 5px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .customer-slot {
+            width: 30%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .customer-slot.drag-over {
+            background: rgba(0, 240, 255, 0.2);
+            box-shadow: inset 0 0 15px var(--neon-cyan);
+        }
+
+        .bubble {
+            background: white;
+            color: black;
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            position: absolute;
+            top: 0;
+            text-align: center;
+            box-shadow: 0 0 8px rgba(255,255,255,0.4);
+            width: 95%;
+            z-index: 2;
+        }
+
+        .bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0;
+            border-style: solid;
+            border-color: white transparent;
+        }
+
+        .patience-bar-container {
+            width: 70%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            position: absolute;
+            top: 50px;
+            overflow: hidden;
+        }
+
+        .patience-bar { height: 100%; width: 100%; background: lime; }
+
+        .avatar-svg {
+            width: 85%;
+            height: 62%;
+            max-height: 105px;
+            pointer-events: none;
+            filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.5));
+        }
+
+        /* Kitchen Area */
+        #kitchen-area {
+            height: 62%;
+            background: #131326;
+            border-top: 3px solid var(--neon-purple);
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        .workspace-top {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 8px;
+        }
+
+        .counter-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--neon-pink);
+            margin-bottom: 6px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .interactive-deck {
+            display: flex;
+            width: 100%;
+            gap: 8px;
+        }
+
+        #ingredients-terminal { flex: 1.2; }
+        #recipe-book-panel { flex: 1; background: rgba(0,0,0,0.2); border-color: var(--neon-purple); }
+
+        .ingredients-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            width: 100%;
+        }
+
+        .ing-btn {
+            background: #1e1e38;
+            border: 1.5px solid var(--neon-purple);
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.75rem;
+            padding: 10px 4px;
+        }
+
+        .ing-btn:active { border-color: var(--neon-cyan); background: #2b2b54; }
+
+        .recipe-list {
+            text-align: left;
+            width: 100%;
+            font-size: 0.68rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .recipe-item { margin-bottom: 3px; display: flex; align-items: center; gap: 4px; }
+
+        /* Multi Cooking Stations */
+        #cooking-station {
+            width: 100%;
+            flex: 1;
+        }
+
+        .stoves-container {
+            display: flex;
+            width: 100%;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .stove-slot {
+            flex: 1;
+            background: #08080f;
+            border: 2px solid #222;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+
+        .stove-slot.active-stove {
+            border-color: var(--neon-cyan);
+            background: #0d0d1f;
+        }
+
+        .stove-label {
+            font-size: 0.65rem;
+            color: #777;
+            text-transform: uppercase;
+        }
+        .stove-slot.active-stove .stove-label {
+            color: var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .stove-mix {
+            font-size: 0.7rem;
+            color: #aaa;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .serve-plate {
+            width: 60px;
+            height: 40px;
+            background: #222;
+            border: 2px solid #00ff66;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            cursor: grab;
+            box-shadow: 0 0 10px rgba(0,255,102,0.3);
+            touch-action: none;
+            z-index: 5;
+        }
+
+        .serve-plate.dragging {
+            opacity: 0.7;
+            cursor: grabbing;
+            position: fixed;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+        }
+
+        .stove-actions {
+            display: flex;
+            width: 100%;
+            gap: 4px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: var(--neon-pink);
+            color: white;
+            border: none;
+            padding: 5px 0;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+        }
+        .action-btn.btn-clear { background: #b31111; }
+        .action-btn:disabled { background: #333; color: #555; cursor: not-allowed; }
+
+        @media (min-width: 600px) {
+            .ing-btn { font-size: 0.8rem; padding: 12px 4px; }
+            .bubble { font-size: 0.85rem; }
+            .stove-mix { font-size: 0.75rem; }
+            .action-btn { font-size: 0.7rem; padding: 8px 0; }
+            .recipe-list { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <div id="start-screen" class="screen">
+            <h1>Cyber Culinary</h1>
+            <h2>Multi-Stove Speed Cooking</h2>
+            <div class="instructions-box">
+                <strong>💡 QUICK HOW TO PLAY:</strong>
+                <ul>
+                    <li>1. <b>Select Stove:</b> Click/Tap one of the 3 stoves at the bottom to select it.</li>
+                    <li>2. <b>Add Ingredients:</b> Click ingredient buttons on the left based on the <b>Recipe Book</b> guide.</li>
+                    <li>3. <b>Cook:</b> Click the pink <b>COOK</b> button on that stove. (You can prepare other stoves simultaneously!).</li>
+                    <li>4. <b>Serve:</b> Drag & drop the finished food directly from the stove onto the ordering Robot! (+20 Points)</li>
+                </ul>
+            </div>
+            <button class="btn" id="btn-start">Start Restaurant</button>
+        </div>
+
+        <div id="hud">
+            <div class="hud-item">SCORE: <span id="score-val">0</span></div>
+            <div class="hud-item">LIVES: <span id="lives-val">3</span></div>
+        </div>
+
+        <div id="main-area">
+            <div id="customers-row">
+                <div class="customer-slot" id="slot-0" data-slot="0"></div>
+                <div class="customer-slot" id="slot-1" data-slot="1"></div>
+                <div class="customer-slot" id="slot-2" data-slot="2"></div>
+            </div>
+
+            <div id="kitchen-area">
+                <div class="workspace-top">
+                    
+                    <div class="interactive-deck">
+                        <div class="counter-section" id="ingredients-terminal">
+                            <div class="section-title">Ingredients</div>
+                            <div class="ingredients-grid">
+                                <button class="ing-btn" data-ing="Battery">🔋 Battery</button>
+                                <button class="ing-btn" data-ing="Oil">🛢️ Oil</button>
+                                <button class="ing-btn" data-ing="Bolt">🔩 Bolt</button>
+                                <button class="ing-btn" data-ing="Crystal">💎 Crystal</button>
+                            </div>
+                        </div>
+
+                        <div class="counter-section" id="recipe-book-panel">
+                            <div class="section-title">📖 Recipe Book</div>
+                            <div class="recipe-list">
+                                <div class="recipe-item">🍔 <b>Burger</b>: 🔋 + 🔩</div>
+                                <div class="recipe-item">🥣 <b>Soup</b>: 🛢️ + 💎</div>
+                                <div class="recipe-item">🍢 <b>Skew</b>: 🔩 + 💎</div>
+                                <div class="recipe-item">🍰 <b>Cake</b>: 🔋 + 🛢️ + 💎</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="counter-section" id="cooking-station">
+                        <div class="section-title">Cyber Cooker Slots (Click to Select)</div>
+                        <div class="stoves-container">
+                            
+                            <div class="stove-slot active-stove" data-stove="0" id="stove-0">
+                                <div class="stove-label">Stove 1</div>
+                                <div class="stove-mix" id="mix-0">Empty</div>
+                                <div class="serve-plate hidden" id="plate-0"></div>
+                                <div class="stove-actions">
+                                    <button class="action-btn btn-clear" data-action="clear" data-id="0">X</button>
+                                    <button class="action-btn btn-cook" data-action="cook" data-id="0" id="cook-0" disabled>Cook</button>
+                                </div>
+                            </div>
+
+                            <div class="stove-slot" data-stove="1" id="stove-1">
+                                <div class="stove-label">Stove 2</div>
+                                <div class="stove-mix" id="mix-1">Empty</div>
+                                <div class="serve-plate hidden" id="plate-1"></div>
+                                <div class="stove-actions">
+                                    <button class="action-btn btn-clear" data-action="clear" data-id="1">X</button>
+                                    <button class="action-btn btn-cook" data-action="cook" data-id="1" id="cook-1" disabled>Cook</button>
+                                </div>
+                            </div>
+
+                            <div class="stove-slot" data-stove="2" id="stove-2">
+                                <div class="stove-label">Stove 3</div>
+                                <div class="stove-mix" id="mix-2">Empty</div>
+                                <div class="serve-plate hidden" id="plate-2"></div>
+                                <div class="stove-actions">
+                                    <button class="action-btn btn-clear" data-action="clear" data-id="2">X</button>
+                                    <button class="action-btn btn-cook" data-action="cook" data-id="2" id="cook-2" disabled>Cook</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="screen hidden">
+            <h1>SYSTEM OVERHEAT</h1>
+            <h2>GAME OVER</h2>
+            <p style="font-size: 1.3rem; margin-bottom: 20px;">Final Score: <span id="final-score-val" style="color: var(--neon-cyan); font-weight:bold;">0</span></p>
+            <button class="btn" id="btn-restart">Reboot</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- SOUND GENERATOR ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if (type === 'click') {
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+            } else if (type === 'cook') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(500, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'success') {
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'fail') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+        // --- HIGH-QUALITY REALISTIC CYBERPUNK MECH SVGS ---
+        const ROBOT_SVGS = {
+            bot1: `
+            <svg class="avatar-svg" viewBox="0 0 100 120">
+                <defs>
+                    <linearGradient id="helm-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#3a4454" />
+                        <stop offset="100%" stop-color="#1a202c" />
+                    </linearGradient>
+                    <linearGradient id="visor-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#00f0ff" />
+                        <stop offset="100%" stop-color="#005588" />
+                    </linearGradient>
+                </defs>
+                <line x1="50" y1="25" x2="50" y2="5" stroke="#ff007f" stroke-width="3" stroke-linecap="round" />
+                <circle cx="50" cy="5" r="4" fill="#ff007f" />
+                <rect x="40" y="85" width="20" height="20" fill="#2d3748" rx="2"/>
+                <path d="M20 105 L80 105 L70 120 L30 120 Z" fill="#4a5568"/>
+                <rect x="22" y="25" width="56" height="62" rx="14" fill="url(#helm-grad)" stroke="#4a5568" stroke-width="2"/>
+                <rect x="26" y="29" width="48" height="54" rx="10" fill="#111" opacity="0.4"/>
+                <rect x="30" y="38" width="40" height="22" rx="6" fill="url(#visor-grad)" stroke="#00f0ff" stroke-width="1.5" />
+                <path d="M32 40 L68 40 L55 46 L32 46 Z" fill="#fff" opacity="0.3"/>
+                <circle cx="42" cy="49" r="3" fill="#fff" />
+                <circle cx="58" cy="49" r="3" fill="#fff" />
+                <line x1="42" y1="70" x2="58" y2="70" stroke="#ff007f" stroke-width="2" />
+                <line x1="45" y1="74" x2="55" y2="74" stroke="#ff007f" stroke-width="2" />
+            </svg>`,
+            
+            bot2: `
+            <svg class="avatar-svg" viewBox="0 0 100 120">
+                <defs>
+                    <linearGradient id="heavy-iron" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#2d3748" />
+                        <stop offset="50%" stop-color="#718096" />
+                        <stop offset="100%" stop-color="#1a202c" />
+                    </linearGradient>
+                </defs>
+                <path d="M10 95 L90 95 L80 120 L20 120 Z" fill="#1a202c" stroke="#4a5568" stroke-width="2"/>
+                <rect x="44" y="80" width="12" height="20" fill="#4a5568"/>
+                <line x1="48" y1="80" x2="48" y2="100" stroke="#00ff66" stroke-width="1.5"/>
+                <line x1="52" y1="80" x2="52" y2="100" stroke="#00ff66" stroke-width="1.5"/>
+                <path d="M25 25 L75 25 L85 80 L15 80 Z" fill="url(#heavy-iron)" stroke="#2d3748" stroke-width="2"/>
+                <circle cx="28" cy="32" r="2" fill="#1a202c" />
+                <circle cx="72" cy="32" r="2" fill="#1a202c" />
+                <circle cx="20" cy="72" r="2" fill="#1a202c" />
+                <circle cx="80" cy="72" r="2" fill="#1a202c" />
+                <rect x="32" y="42" width="36" height="12" rx="4" fill="#111" />
+                <circle cx="50" cy="48" r="5" fill="#00ff66" />
+                <circle cx="50" cy="48" r="2" fill="#fff" />
+                <path d="M35 64 L65 64 L60 75 L40 75 Z" fill="#1a202c" />
+            </svg>`,
+            
+            bot3: `
+            <svg class="avatar-svg" viewBox="0 0 100 120">
+                <defs>
+                    <radialGradient id="sphere-shading" cx="40%" cy="40%" r="60%">
+                        <stop offset="0%" stop-color="#edf2f7" />
+                        <stop offset="70%" stop-color="#cbd5e0" />
+                        <stop offset="100%" stop-color="#4a5568" />
+                    </radialGradient>
+                </defs>
+                <ellipse cx="50" cy="110" rx="30" ry="8" fill="none" stroke="#9400d3" stroke-width="3" opacity="0.6"/>
+                <ellipse cx="50" cy="110" rx="15" ry="4" fill="#9400d3" opacity="0.4"/>
+                <path d="M46 80 L54 80 L50 100 Z" fill="#2d3748"/>
+                <circle cx="50" cy="50" r="34" fill="url(#sphere-shading)" stroke="#a0aec0" stroke-width="1"/>
+                <circle cx="14" cy="50" r="6" fill="#4a5568" />
+                <circle cx="86" cy="50" r="6" fill="#4a5568" />
+                <path d="M40 24 L60 24 L55 30 L45 30 Z" fill="#9400d3" />
+                <path d="M22 45 C24 68, 76 68, 78 45 C74 38, 26 38, 22 45 Z" fill="#1a202c" />
+                <ellipse cx="38" cy="48" rx="4" ry="2" fill="#ff007f" />
+                <ellipse cx="62" cy="48" rx="4" ry="2" fill="#ff007f" />
+                <path d="M28 64 L36 70" stroke="#718096" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M72 64 L64 70" stroke="#718096" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>`
+        };
+
+        const RECIPES = [
+            { name: "Cyber Burger", icon: "🍔", ingredients: ["Battery", "Bolt"] },
+            { name: "E-Fluid Soup", icon: "🥣", ingredients: ["Oil", "Crystal"] },
+            { name: "Neon Skewer", icon: "🍢", ingredients: ["Bolt", "Crystal"] },
+            { name: "Atomic Cake", icon: "🍰", ingredients: ["Battery", "Oil", "Crystal"] }
+        ];
+
+        const BOT_TYPES = [
+            { name: "Alpha-7", svg: ROBOT_SVGS.bot1 },
+            { name: "Z-Gorg", svg: ROBOT_SVGS.bot2 },
+            { name: "Mech-K", svg: ROBOT_SVGS.bot3 }
+        ];
+
+        let score = 0, lives = 3, gameActive = false;
+        let activeStoveIdx = 0; 
+        
+        let stoves = [
+            { ingredients: [], dish: null },
+            { ingredients: [], dish: null },
+            { ingredients: [], dish: null }
+        ];
+
+        let customers = [null, null, null];
+        let customerTimers = [null, null, null];
+        let spawnInterval = null;
+
+        const scoreVal = document.getElementById('score-val');
+        const livesVal = document.getElementById('lives-val');
+        const finalScoreVal = document.getElementById('final-score-val');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+
+        document.querySelectorAll('.stove-slot').forEach(stoveEl => {
+            stoveEl.addEventListener('click', (e) => {
+                if(e.target.closest('.stove-actions') || e.target.classList.contains('serve-plate')) return; 
+                playSound('click');
+                activeStoveIdx = parseInt(stoveEl.getAttribute('data-stove'));
+                updateStoveSelectionVisuals();
+            });
+        });
+
+        document.querySelectorAll('.ing-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!gameActive) return;
+                let currentStove = stoves[activeStoveIdx];
+                if (currentStove.dish) return; 
+                
+                const ing = btn.getAttribute('data-ing');
+                if (currentStove.ingredients.length < 3) {
+                    currentStove.ingredients.push(ing);
+                    playSound('click');
+                    renderStoveUI(activeStoveIdx);
+                }
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!gameActive) return;
+            const target = e.target;
+            if (!target.classList.contains('action-btn')) return;
+
+            const id = parseInt(target.getAttribute('data-id'));
+            const action = target.getAttribute('data-action');
+
+            if (action === 'cook') {
+                let currentStove = stoves[id];
+                if(currentStove.ingredients.length === 0 || currentStove.dish) return;
+                playSound('cook');
+
+                let sortedInputs = [...currentStove.ingredients].sort();
+                let matched = RECIPES.find(recipe => {
+                    if (recipe.ingredients.length !== sortedInputs.length) return false;
+                    let sortedRecipe = [...recipe.ingredients].sort();
+                    return sortedRecipe.every((val, idx) => val === sortedInputs[idx]);
+                });
+
+                currentStove.dish = matched ? matched : { name: "Sludge Gloop", icon: "🤢" };
+                currentStove.ingredients = [];
+                renderStoveUI(id);
+            } else if (action === 'clear') {
+                playSound('fail');
+                stoves[id].ingredients = [];
+                stoves[id].dish = null;
+                renderStoveUI(id);
+            }
+        });
+
+        function updateStoveSelectionVisuals() {
+            document.querySelectorAll('.stove-slot').forEach((s, idx) => {
+                if(idx === activeStoveIdx) s.classList.add('active-stove');
+                else s.classList.remove('active-stove');
+            });
+        }
+
+        function renderStoveUI(id) {
+            const currentStove = stoves[id];
+            const mixEl = document.getElementById(`mix-${id}`);
+            const plateEl = document.getElementById(`plate-${id}`);
+            const cookBtn = document.getElementById(`cook-${id}`);
+
+            if (currentStove.dish) {
+                mixEl.classList.add('hidden');
+                plateEl.classList.remove('hidden');
+                plateEl.textContent = currentStove.dish.icon;
+                cookBtn.disabled = true;
+            } else {
+                plateEl.classList.add('hidden');
+                mixEl.classList.remove('hidden');
+                mixEl.innerHTML = currentStove.ingredients.length > 0 ? currentStove.ingredients.map(i => i==="Battery"?"🔋":i==="Oil"?"🛢️":i==="Bolt"?"🔩":"💎").join("") : "Empty";
+                cookBtn.disabled = currentStove.ingredients.length === 0;
+            }
+        }
+
+        let isDragging = false;
+        let activeDraggedPlate = null;
+        let sourceStoveId = null;
+
+        document.addEventListener('mousedown', startGlobalDrag);
+        document.addEventListener('touchstart', startGlobalDrag, { passive: false });
+
+        function startGlobalDrag(e) {
+            if (!gameActive) return;
+            const plateTarget = e.target.closest('.serve-plate');
+            if (!plateTarget || plateTarget.classList.contains('hidden')) return;
+
+            e.preventDefault();
+            isDragging = true;
+            activeDraggedPlate = plateTarget;
+            sourceStoveId = parseInt(plateTarget.getAttribute('id').split('-')[1]);
+            
+            playSound('click');
+            activeDraggedPlate.classList.add('dragging');
+            trackMovement(e);
+
+            window.addEventListener('mousemove', dragGlobalMove);
+            window.addEventListener('touchmove', dragGlobalMove, { passive: false });
+            window.addEventListener('mouseup', endGlobalDrag);
+            window.addEventListener('touchend', endGlobalDrag);
+        }
+
+        function dragGlobalMove(e) {
+            if (!isDragging || !activeDraggedPlate) return;
+            e.preventDefault();
+            trackMovement(e);
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            document.querySelectorAll('.customer-slot').forEach(slot => {
+                const rect = slot.getBoundingClientRect();
+                if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+                    slot.classList.add('drag-over');
+                } else {
+                    slot.classList.remove('drag-over');
+                }
+            });
+        }
+
+        function trackMovement(e) {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            activeDraggedPlate.style.left = `${clientX}px`;
+            activeDraggedPlate.style.top = `${clientY}px`;
+        }
+
+        function endGlobalDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            activeDraggedPlate.classList.remove('dragging');
+            activeDraggedPlate.style.left = '0px';
+            activeDraggedPlate.style.top = '0px';
+
+            const changeEvent = e.changedTouches ? e.changedTouches[0] : e;
+            const targetSlot = document.elementFromPoint(changeEvent.clientX, changeEvent.clientY)?.closest('.customer-slot');
+
+            if (targetSlot) {
+                const slotIndex = parseInt(targetSlot.getAttribute('data-slot'));
+                checkServiceMatch(slotIndex, sourceStoveId);
+            }
+
+            document.querySelectorAll('.customer-slot').forEach(s => s.classList.remove('drag-over'));
+            
+            window.removeEventListener('mousemove', dragGlobalMove);
+            window.removeEventListener('touchmove', dragGlobalMove);
+            window.removeEventListener('mouseup', endGlobalDrag);
+            window.removeEventListener('touchend', endGlobalDrag);
+            
+            activeDraggedPlate = null;
+            sourceStoveId = null;
+        }
+
+        function checkServiceMatch(customerSlotIdx, stoveIdx) {
+            const targetCustomer = customers[customerSlotIdx];
+            const cookedDish = stoves[stoveIdx].dish;
+
+            if (targetCustomer && cookedDish && targetCustomer.recipe.name === cookedDish.name) {
+                score += 20; 
+                scoreVal.textContent = score;
+                playSound('success');
+                removeCustomer(customerSlotIdx);
+                stoves[stoveIdx].dish = null;
+            } else {
+                playSound('fail');
+            }
+            renderStoveUI(stoveIdx);
+        }
+
+        function startGame() {
+            score = 0; lives = 3; gameActive = true; activeStoveIdx = 0;
+            stoves = [{ ingredients: [], dish: null }, { ingredients: [], dish: null }, { ingredients: [], dish: null }];
+            customers = [null, null, null];
+            
+            scoreVal.textContent = score;
+            livesVal.textContent = lives;
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            for(let i=0; i<3; i++) {
+                document.getElementById(`slot-${i}`).innerHTML = '';
+                renderStoveUI(i);
+            }
+            updateStoveSelectionVisuals();
+            spawnCustomer();
+            spawnInterval = setInterval(() => { if (gameActive) spawnCustomer(); }, 5500);
+        }
+
+        function spawnCustomer() {
+            const emptySlots = [];
+            customers.forEach((c, idx) => { if (c === null) emptySlots.push(idx); });
+            if (emptySlots.length === 0) return;
+
+            const slot = emptySlots[Math.floor(Math.random() * emptySlots.length)];
+            const bot = BOT_TYPES[Math.floor(Math.random() * BOT_TYPES.length)];
+            const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+
+            customers[slot] = { name: bot.name, recipe: recipe, patience: 100, svg: bot.svg };
+            renderCustomer(slot);
+        }
+
+        function renderCustomer(slot) {
+            const el = document.getElementById(`slot-${slot}`);
+            const data = customers[slot];
+            el.innerHTML = `
+                <div class="bubble">${data.recipe.icon} ${data.recipe.name}</div>
+                <div class="patience-bar-container"><div class="patience-bar" id="patience-${slot}"></div></div>
+                ${data.svg}
+            `;
+
+            customerTimers[slot] = setInterval(() => {
+                if (!gameActive || !customers[slot]) { clearInterval(customerTimers[slot]); return; }
+                customers[slot].patience -= 0.8;
+                const bar = document.getElementById(`patience-${slot}`);
+                if (bar) {
+                    bar.style.width = `${customers[slot].patience}%`;
+                    if (customers[slot].patience < 40) bar.style.backgroundColor = 'red';
+                }
+                if (customers[slot].patience <= 0) {
+                    clearInterval(customerTimers[slot]);
+                    playSound('fail');
+                    removeCustomer(slot);
+                    lives--; livesVal.textContent = lives;
+                    if (lives <= 0) endGame();
+                }
+            }, 250);
+        }
+
+        function removeCustomer(slot) {
+            if (customerTimers[slot]) clearInterval(customerTimers[slot]);
+            customers[slot] = null;
+            document.getElementById(`slot-${slot}`).innerHTML = '';
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(spawnInterval);
+            customerTimers.forEach(t => clearInterval(t));
+            finalScoreVal.textContent = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
