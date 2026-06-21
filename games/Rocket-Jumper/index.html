@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rocket Jumper</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #0d0d11;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 430px;
+            height: 100vh;
+            max-height: 850px;
+            background: #1a3a66;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            cursor: pointer;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .ui-box {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 900;
+            border: 2px solid rgba(255, 67, 67, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #score-box {
+            border-color: #ffb700;
+            color: #ffd700;
+        }
+        #combo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            transform: scale(0);
+            transition: transform 0.15s ease;
+        }
+        #combo-container.active {
+            transform: scale(1);
+        }
+        #combo-bar-bg {
+            width: 90px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #combo-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: #ff439e;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            background: rgba(11, 15, 28, 0.98);
+            color: #ffffff;
+            text-align: center;
+            padding: 25px;
+        }
+        .screen h1 {
+            font-size: 34px;
+            color: #ff4343;
+            margin-bottom: 3px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(255,67,67,0.5);
+        }
+        .screen h3 {
+            font-size: 12px;
+            color: #ffb700;
+            margin-bottom: 25px;
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+        
+        /* New Modern Instructions UI */
+        .ins-card {
+            width: 100%;
+            max-width: 340px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.02);
+        }
+        .ins-row {
+            margin-bottom: 15px;
+        }
+        .ins-row:last-child {
+            margin-bottom: 0;
+        }
+        .ins-label {
+            font-size: 11px;
+            font-weight: 900;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+        .ins-content {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .badge.coin {
+            background: rgba(255, 183, 0, 0.15);
+            color: #ffd700;
+            border: 1px solid rgba(255, 183, 0, 0.3);
+        }
+        .badge.platform {
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            background: #ff4343;
+            color: #ffffff;
+            border: none;
+            padding: 16px 55px;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: 30px;
+            box-sizing: border-box;
+            box-shadow: 0 6px 25px rgba(255, 67, 67, 0.45);
+            transition: transform 0.1s, background-color 0.2s;
+            letter-spacing: 1.5px;
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .hide { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- UI Bar -->
+        <div id="ui-layer">
+            <div id="score-box" class="ui-box">SCORE: <span id="score-num">0</span></div>
+            <div id="combo-container">
+                <div id="combo-box" class="ui-box" style="padding: 4px 12px; font-size: 13px; color: #ff439e; border-color: #ff439e;">COMBO X1</div>
+                <div id="combo-bar-bg"><div id="combo-bar-fill"></div></div>
+            </div>
+        </div>
+
+        <!-- Start Screen (Beautiful English Instructions) -->
+        <div id="start-screen" class="screen">
+            <h1>ROCKET JUMPER</h1>
+            <h3>INSANE EDITION</h3>
+            
+            <div class="ins-card">
+                <div class="ins-row">
+                    <div class="ins-label">🎯 Objective</div>
+                    <div class="ins-content">
+                        Land on moving platforms and grab gold coins. 
+                        <div class="badge-container">
+                            <span class="badge coin">🪙 Coin = +1 PTS</span>
+                            <span class="badge platform">🛑 Platform = 0 PTS</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ins-row">
+                    <div class="ins-label">💀 The Risk</div>
+                    <div class="ins-content">
+                        <strong>Don't miss!</strong> Tapping empty space kills your engine, causing a fatal freefall. Watch out for the auto-scrolling camera!
+                    </div>
+                </div>
+                
+                <div class="ins-row">
+                    <div class="ins-label">⚡ Combo System</div>
+                    <div class="ins-content">
+                        Chain your jumps rapidly before the combo bar drains to multiply your coin points up to <strong>x4</strong>!
+                    </div>
+                </div>
+
+                <div class="ins-row" style="margin-bottom:0;">
+                    <div class="ins-label">🎮 Controls</div>
+                    <div class="ins-content" style="color: #ffb700; font-weight: 700;">
+                        Tap directly on the next upper platform to launch.
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" id="start-btn">START CHALLENGE</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen hide">
+            <h2 style="color: #ff4343; font-size: 40px; font-weight: 900; margin-bottom: 5px;">GAME OVER</h2>
+            <p id="death-reason" style="color: #94a3b8; margin-bottom: 25px;">You missed the platform and fell into space!</p>
+            <p style="font-size: 16px; margin-bottom: 35px; color: #cbd5e1; letter-spacing: 1px;">FINAL SCORE:<br><span id="final-score" style="color: #ffd700; font-weight: 900; font-size: 52px; text-shadow: 0 0 15px rgba(255,215,0,0.4);">0</span></p>
+            <button class="btn" id="retry-btn" style="background: #ffd700; color: #0d0d11; box-shadow: 0 6px 25px rgba(255,215,0,0.3);">PLAY AGAIN</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreNum = document.getElementById('score-num');
+        const comboContainer = document.getElementById('combo-container');
+        const comboBox = document.getElementById('combo-box');
+        const comboBarFill = document.getElementById('combo-bar-fill');
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const finalScore = document.getElementById('final-score');
+        const deathReason = document.getElementById('death-reason');
+        const startBtn = document.getElementById('start-btn');
+        const retryBtn = document.getElementById('retry-btn');
+        const container = document.getElementById('game-container');
+
+        let logicalWidth = 0; let logicalHeight = 0;
+        let smokeParticles = []; let coins = []; let platforms = [];
+
+        let audioCtx = null;
+        function playSound(freq, type, duration, volume = 0.06) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function resize() {
+            logicalWidth = canvas.offsetWidth; logicalHeight = canvas.offsetHeight;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = logicalWidth * dpr; canvas.height = logicalHeight * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let isGameActive = false;
+        let score = 0; let comboMultiplier = 1; let comboTimer = 0; const comboMaxTime = 70;
+        let cameraY = 0; let targetCameraY = 0; let autoCameraSpeed = 0.35;
+
+        let player = {
+            x: 0, y: 0, startX: 0, startY: 0, targetX: 0, targetY: 0,
+            progress: 1, speed: 0.05, animFrame: 0, currentPlatformId: null,
+            isFalling: false, vy: 0
+        };
+
+        function initGame() {
+            score = 0; comboMultiplier = 1; comboTimer = 0;
+            cameraY = 0; targetCameraY = 0; autoCameraSpeed = 0.4;
+            scoreNum.innerText = score;
+            comboContainer.classList.remove('active');
+            platforms = []; smokeParticles = []; coins = [];
+            player.isFalling = false; player.vy = 0;
+
+            let baseP = { id: 0, x: logicalWidth / 2, y: logicalHeight - 100, w: 110, h: 16, type: 'rainbow', speed: 0, dir: 1 };
+            platforms.push(baseP);
+
+            player.x = baseP.x; player.y = baseP.y - 20;
+            player.progress = 1; player.currentPlatformId = 0;
+
+            for (let i = 1; i <= 10; i++) generatePlatformAtIndex(i);
+        }
+
+        function generatePlatformAtIndex(index) {
+            let lastP = platforms[platforms.length - 1];
+            let pWidth = 80;
+            let minX = pWidth/2 + 15; let maxX = logicalWidth - pWidth/2 - 15;
+            let pX = Math.random() * (maxX - minX) + minX;
+            let pY = lastP.y - (Math.random() * 20 + 125);
+
+            let types = ['rainbow', 'neon-blue', 'neon-pink'];
+            let pType = types[Math.floor(Math.random() * types.length)];
+            let movementSpeed = 0.7 + Math.min(1.3, score * 0.05);
+
+            platforms.push({
+                id: index, x: pX, y: pY, w: pWidth, h: 14, type: pType,
+                speed: movementSpeed, dir: Math.random() > 0.5 ? 1 : -1
+            });
+
+            if (Math.random() < 0.4) {
+                coins.push({
+                    platformId: index, offsetX: (Math.random() - 0.5) * 25, y: pY - 26, collected: false
+                });
+            }
+        }
+
+        function handleTap(clientX, clientY) {
+            if (!isGameActive || player.progress < 1 || player.isFalling) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const tapX = clientX - rect.left;
+            const tapY = clientY - rect.top - cameraY;
+
+            let clickedPlatform = null;
+            let maxClickDist = 65;
+
+            platforms.forEach(p => {
+                let d = Math.hypot(p.x - tapX, p.y - tapY);
+                if (d < maxClickDist) {
+                    maxClickDist = d; clickedPlatform = p;
+                }
+            });
+
+            if (clickedPlatform && clickedPlatform.y < player.y) {
+                if (comboTimer > 0) comboMultiplier = Math.min(4, comboMultiplier + 1);
+                else comboMultiplier = 1;
+
+                comboTimer = comboMaxTime;
+                comboContainer.classList.add('active');
+                comboBox.innerText = `COMBO X${comboMultiplier}`;
+
+                player.startX = player.x; player.startY = player.y;
+                player.targetX = clickedPlatform.x; player.targetY = clickedPlatform.y - 20;
+                player.progress = 0;
+                player.currentPlatformId = clickedPlatform.id;
+
+                let distance = Math.hypot(player.targetX - player.startX, player.targetY - player.startY);
+                player.speed = Math.max(0.045, 19 / distance);
+                playSound(440 + (comboMultiplier * 40), 'triangle', 0.1);
+            } else {
+                player.isFalling = true; player.vy = 1;
+                playSound(180, 'sawtooth', 0.3, 0.1);
+            }
+        }
+
+        container.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== 'BUTTON') handleTap(e.clientX, e.clientY);
+        });
+        container.addEventListener('touchstart', (e) => {
+            if(e.target.tagName !== 'BUTTON') {
+                if (e.cancelable) e.preventDefault();
+                handleTap(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        function loop() {
+            if (isGameActive) {
+                if (comboTimer > 0) {
+                    comboTimer--;
+                    let percent = (comboTimer / comboMaxTime) * 100;
+                    comboBarFill.style.width = `${percent}%`;
+                    if (comboTimer === 0) { comboMultiplier = 1; comboContainer.classList.remove('active'); }
+                }
+
+                platforms.forEach(p => {
+                    if (p.speed > 0) {
+                        p.x += p.speed * p.dir;
+                        if (p.x - p.w/2 < 5 || p.x + p.w/2 > logicalWidth - 5) p.dir *= -1;
+                    }
+                });
+
+                if (player.isFalling) {
+                    player.vy += 0.4; player.y += player.vy;
+                    if (Math.random() < 0.4) {
+                        smokeParticles.push({ x: player.x, y: player.y, vx: (Math.random()-0.5)*3, vy: -1, r: 5, alpha: 0.7 });
+                    }
+                } else if (player.progress < 1) {
+                    player.progress += player.speed;
+                    if (player.progress > 1) player.progress = 1;
+
+                    let currentTargetP = platforms.find(p => p.id === player.currentPlatformId);
+                    if (currentTargetP) {
+                        player.targetX = currentTargetP.x; player.targetY = currentTargetP.y - 20;
+                    }
+
+                    player.x = player.startX + (player.targetX - player.startX) * player.progress;
+                    let arc = Math.sin(player.progress * Math.PI) * -55;
+                    player.y = (player.startY + (player.targetY - player.startY) * player.progress) + arc;
+
+                    coins.forEach(c => {
+                        let parentP = platforms.find(p => p.id === c.platformId);
+                        if (parentP && !c.collected) {
+                            let realCoinX = parentP.x + c.offsetX;
+                            if (Math.hypot(player.x - realCoinX, player.y - c.y) < 24) {
+                                c.collected = true;
+                                score += 1 * comboMultiplier;
+                                scoreNum.innerText = score;
+                                playSound(950, 'sine', 0.12, 0.1);
+                            }
+                        }
+                    });
+
+                    if (Math.random() < 0.5) {
+                        smokeParticles.push({
+                            x: player.x, y: player.y + 12, vx: (Math.random()-0.5)*1, vy: Math.random()*1.5+1, r: 4, alpha: 0.5
+                        });
+                    }
+
+                    if (player.progress === 1) {
+                        targetCameraY = (logicalHeight * 0.68) - player.y;
+                        playSound(240, 'sine', 0.04, 0.05);
+                    }
+                } else {
+                    let currentP = platforms.find(p => p.id === player.currentPlatformId);
+                    if (currentP && currentP.speed > 0) player.x += currentP.speed * currentP.dir;
+                }
+
+                let speedEscalation = Math.min(1.5, score * 0.06);
+                cameraY += ((targetCameraY - cameraY) * 0.09) - (autoCameraSpeed + speedEscalation);
+
+                smokeParticles.forEach(p => { p.x += p.vx; p.y += p.vy; p.alpha -= 0.025; });
+                smokeParticles = smokeParticles.filter(p => p.alpha > 0);
+
+                let highest = platforms[platforms.length - 1];
+                if (highest.y + cameraY > -200) generatePlatformAtIndex(highest.id + 1);
+
+                platforms = platforms.filter(p => p.y + cameraY < logicalHeight + 100);
+                coins = coins.filter(c => c.y + cameraY < logicalHeight + 100);
+
+                if (player.y + cameraY > logicalHeight) {
+                    isGameActive = false; playSound(120, 'sawtooth', 0.6, 0.15);
+                    finalScore.innerText = score;
+                    deathReason.innerText = player.isFalling ? "Miscalculation! You missed the platform and fell into the abyss." : "Too slow! The scrolling camera crushed you.";
+                    gameoverScreen.classList.remove('hide');
+                }
+                if (player.y + cameraY < -60) {
+                    isGameActive = false; playSound(120, 'sawtooth', 0.6, 0.15);
+                    finalScore.innerText = score;
+                    deathReason.innerText = "Rocket rocketed too high out of bounds!";
+                    gameoverScreen.classList.remove('hide');
+                }
+
+                player.animFrame += 0.12;
+            }
+
+            // ==========================================
+            // --- RENDER VISUAL ---
+            // ==========================================
+            ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
+            skyGrad.addColorStop(0, '#0a1128'); skyGrad.addColorStop(0.6, '#101f42'); skyGrad.addColorStop(1, '#1c3366');
+            ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+            smokeParticles.forEach(p => {
+                ctx.fillStyle = `rgba(220, 225, 255, ${p.alpha})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y + cameraY, p.r, 0, Math.PI * 2); ctx.fill();
+            });
+
+            platforms.forEach(p => {
+                let rY = p.y + cameraY;
+                if (rY > -40 && rY < logicalHeight + 40) {
+                    ctx.save(); ctx.shadowBlur = 10;
+                    if (p.type === 'rainbow') {
+                        ctx.shadowColor = 'rgba(255,82,176,0.6)';
+                        let g = ctx.createLinearGradient(p.x - p.w/2, 0, p.x + p.w/2, 0);
+                        g.addColorStop(0, '#ff439e'); g.addColorStop(0.5, '#ffea00'); g.addColorStop(1, '#00e5ff');
+                        ctx.fillStyle = g;
+                    } else if (p.type === 'neon-blue') {
+                        ctx.shadowColor = 'rgba(0,229,255,0.6)'; ctx.fillStyle = '#00e5ff';
+                    } else {
+                        ctx.shadowColor = 'rgba(255,67,67,0.6)'; ctx.fillStyle = '#ff4343';
+                    }
+                    ctx.beginPath(); ctx.ellipse(p.x, rY, p.w / 2, p.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.ellipse(p.x, rY, p.w / 3, p.h / 3, 0, 0, Math.PI * 2); ctx.stroke();
+                    ctx.restore();
+                }
+            });
+
+            coins.forEach(c => {
+                if (!c.collected) {
+                    let parentP = platforms.find(p => p.id === c.platformId);
+                    if (parentP) {
+                        let realCoinX = parentP.x + c.offsetX; let rY = c.y + cameraY;
+                        if (rY > -30 && rY < logicalHeight + 30) {
+                            ctx.save(); ctx.translate(realCoinX, rY);
+                            let pulse = 7 + Math.sin(player.animFrame * 1.5) * 1.2;
+                            ctx.shadowBlur = 12; ctx.shadowColor = '#ffb700'; ctx.fillStyle = '#ffb700';
+                            ctx.beginPath(); ctx.arc(0, 0, pulse, 0, Math.PI * 2); ctx.fill();
+                            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, pulse * 0.4, 0, Math.PI * 2); ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+                }
+            });
+
+            if (isGameActive) {
+                ctx.save(); ctx.translate(player.x, player.y + cameraY);
+                if (player.progress < 1 && !player.isFalling) {
+                    let fireH = 14 + Math.random() * 8;
+                    let fireGrad = ctx.createLinearGradient(0, 15, 0, 15 + fireH);
+                    fireGrad.addColorStop(0, '#ffea00'); fireGrad.addColorStop(1, 'rgba(255,67,67,0)');
+                    ctx.fillStyle = fireGrad; ctx.beginPath(); ctx.moveTo(-7, 15); ctx.lineTo(0, 15 + fireH); ctx.lineTo(7, 15); ctx.closePath(); ctx.fill();
+                }
+                ctx.fillStyle = '#ff4343';
+                ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-22, 13); ctx.lineTo(-13, 13); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(22, 13); ctx.lineTo(13, 13); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(-14, -11, 28, 26, 7); ctx.fill();
+                ctx.fillStyle = '#ff4343'; ctx.beginPath(); ctx.moveTo(-14, -10); ctx.quadraticCurveTo(0, -24, 14, -10); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#fca5c5'; ctx.beginPath(); ctx.arc(0, -3, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-3.5, -4, 3, 0, Math.PI * 2); ctx.arc(3.5, -4, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(-3.5, -4, 1.2, 0, Math.PI * 2); ctx.arc(3.5, -4, 1.2, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 1, 2.5, 0, Math.PI); ctx.stroke();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); startScreen.classList.add('hide'); initGame(); isGameActive = true;
+        });
+        retryBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); gameoverScreen.classList.add('hide'); initGame(); isGameActive = true;
+        });
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
