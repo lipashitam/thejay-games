@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Space Traveler - Deluxe Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #05020a;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 850px;
+            background: radial-gradient(circle at center, #160a29 0%, #05020a 100%);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+        }
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            z-index: 10;
+            background: rgba(25, 12, 46, 0.6);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        #score-num {
+            font-size: 22px;
+            color: #00ffcc;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            background: rgba(5, 2, 10, 0.88);
+            color: #ffffff;
+            text-align: center;
+            padding: 30px;
+            backdrop-filter: blur(8px);
+        }
+        .screen h1 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            background: linear-gradient(45deg, #00ffcc, #ab4bf2);
+            -webkit-background-clip: text;
+            background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(171, 75, 242, 0.3);
+        }
+        .screen h2 {
+            font-size: 32px;
+            color: #ff3366;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.4);
+        }
+        .instructions-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 320px;
+            margin: 15px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccd0db;
+        }
+        .instructions-box ul {
+            text-align: left;
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+        .instructions-box li {
+            margin-bottom: 6px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #00ffcc 0%, #00b3ff 100%);
+            color: #05020a;
+            border: none;
+            padding: 14px 45px;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 5px 20px rgba(0, 255, 204, 0.4);
+            transition: all 0.2s ease;
+        }
+        .btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(0, 255, 204, 0.2);
+        }
+        #gameover-screen .btn {
+            background: linear-gradient(135deg, #ff3366 0%, #ff6600 100%);
+            box-shadow: 0 5px 20px rgba(255, 51, 102, 0.4);
+        }
+        .final-score-text {
+            font-size: 20px;
+            color: #ffffff;
+            margin: 15px 0;
+        }
+        #final-score {
+            font-size: 28px;
+            color: #00ffcc;
+            font-weight: bold;
+            display: block;
+            margin-top: 5px;
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
+        }
+        .hide { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="score-display">SCORE: <span id="score-num">0</span></div>
+
+        <div id="start-screen" class="screen">
+            <h1>SPACE TRAVELER</h1>
+            <div class="instructions-box">
+                <strong>HOW TO PLAY:</strong>
+                <ul>
+                    <li>Your spacecraft orbits around planets automatically.</li>
+                    <li><strong>Tap or Click anywhere</strong> to launch into space.</li>
+                    <li>Aim carefully and land safely onto the next planet!</li>
+                    <li>Collect glowing golden plasma orbs for extra points.</li>
+                </ul>
+            </div>
+            <button class="btn" id="start-btn">START GAME</button>
+        </div>
+
+        <div id="gameover-screen" class="screen hide">
+            <h2>MISSION FAILED</h2>
+            <p>Your capsule drifted away into the deep cosmic void...</p>
+            <div class="final-score-text">
+                FINAL SCORE
+                <span id="final-score">0</span>
+            </div>
+            <button class="btn" id="retry-btn">TRY AGAIN</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // --- Web Audio Synthesizer Framework ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'launch') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'land') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.2);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'coin') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880, now + 0.07); // A5
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'gameover') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.6);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            }
+        }
+
+        // --- Core Game Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreNum = document.getElementById('score-num');
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const finalScore = document.getElementById('final-score');
+        const startBtn = document.getElementById('start-btn');
+        const retryBtn = document.getElementById('retry-btn');
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let isGameActive = false;
+        let currentScore = 0;
+        let planetsArray = [];
+        let playerObj = {};
+        let coinsArray = [];
+        let popupsArray = [];
+        let particlesArray = [];
+        let starsArray = [];
+        let cameraViewportY = 0;
+        let targetCameraViewportY = 0;
+
+        // Rich cosmic colors for thematic styling
+        const planetPalettes = [
+            { base: '#d46a43', core: '#fca374', shadow: '#4d1c0b', glow: 'rgba(212, 106, 67, 0.4)' }, // Mars Rust
+            { base: '#3d8ca3', core: '#74ccfc', shadow: '#0c2d38', glow: 'rgba(61, 140, 163, 0.4)' }, // Neptune Cyan
+            { base: '#8f4fa3', core: '#df99f5', shadow: '#2d0f36', glow: 'rgba(143, 79, 163, 0.4)' }, // Deep Purple Exoplanet
+            { base: '#4ba368', core: '#89f5ac', shadow: '#10361d', glow: 'rgba(75, 163, 104, 0.4)' }, // Emerald Gas Giant
+            { base: '#b09e35', core: '#fced8a', shadow: '#3b340a', glow: 'rgba(176, 158, 53, 0.4)' }  // Toxic Sulfur World
+        ];
+
+        // Generate static random stars background
+        for (let i = 0; i < 60; i++) {
+            starsArray.push({
+                x: Math.random() * 500,
+                y: Math.random() * 2000,
+                size: 0.5 + Math.random() * 1.8,
+                alpha: 0.3 + Math.random() * 0.7
+            });
+        }
+
+        function initGameData() {
+            currentScore = 0;
+            scoreNum.innerText = currentScore;
+            cameraViewportY = 0;
+            targetCameraViewportY = 0;
+            planetsArray = [];
+            coinsArray = [];
+            popupsArray = [];
+            particlesArray = [];
+
+            // Spawn first starter planet safely in the lower section
+            planetsArray.push({
+                x: canvas.width / 2,
+                y: canvas.height - 150,
+                radius: 45,
+                palette: planetPalettes[0],
+                hasRings: true
+            });
+
+            // Pre-spawn immediate next set of planets
+            for(let i = 0; i < 6; i++) {
+                spawnNewPlanet();
+            }
+
+            playerObj = {
+                planetIndex: 0,
+                angle: 0,
+                orbitRadius: 72,
+                rotationSpeed: 0.035, 
+                size: 8,
+                isFlying: false,
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                flySpeed: 5.2 
+            };
+            
+            updatePlayerCoordinatePosition();
+        }
+
+        function spawnNewPlanet() {
+            let lastPlanet = planetsArray[planetsArray.length - 1];
+            let minY = lastPlanet.y - 250;
+            let maxY = lastPlanet.y - 190;
+            
+            let generatedRadius = 32 + Math.random() * 14;
+            let generatedX = generatedRadius + Math.random() * (canvas.width - generatedRadius * 2);
+            let generatedY = minY + Math.random() * (maxY - minY);
+            let selectedPalette = planetPalettes[Math.floor(Math.random() * planetPalettes.length)];
+
+            planetsArray.push({
+                x: generatedX,
+                y: generatedY,
+                radius: generatedRadius,
+                palette: selectedPalette,
+                hasRings: Math.random() > 0.65
+            });
+
+            // Spawn collectible orbs along flight path
+            if(Math.random() > 0.35) {
+                let coinQuantity = 3 + Math.floor(Math.random() * 3);
+                let originX = lastPlanet.x;
+                let originY = lastPlanet.y - 60;
+                let destinationX = generatedX;
+                let destinationY = generatedY + 60;
+
+                for(let j = 1; j <= coinQuantity; j++) {
+                    let travelRatio = j / (coinQuantity + 1);
+                    coinsArray.push({
+                        x: originX + (destinationX - originX) * travelRatio,
+                        y: originY + (destinationY - originY) * travelRatio,
+                        radius: 5,
+                        isActive: true,
+                        pointValue: j * 2
+                    });
+                }
+            }
+        }
+
+        function updatePlayerCoordinatePosition() {
+            if (!playerObj.isFlying) {
+                let currentPlanet = planetsArray[playerObj.planetIndex];
+                playerObj.x = currentPlanet.x + Math.cos(playerObj.angle) * playerObj.orbitRadius;
+                playerObj.y = currentPlanet.y + Math.sin(playerObj.angle) * playerObj.orbitRadius;
+            }
+        }
+
+        function triggerStartGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            startScreen.classList.add('hide');
+            gameoverScreen.classList.add('hide');
+            resizeCanvas();
+            initGameData();
+            setTimeout(() => {
+                isGameActive = true;
+            }, 100);
+        }
+
+        function triggerGameOver() {
+            isGameActive = false;
+            playSound('gameover');
+            finalScore.innerText = currentScore;
+            gameoverScreen.classList.remove('hide');
+        }
+
+        // --- Event Listeners UI Bridge ---
+        startBtn.addEventListener('click', (e) => { e.stopPropagation(); triggerStartGame(); });
+        startBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); triggerStartGame(); });
+        retryBtn.addEventListener('click', (e) => { e.stopPropagation(); triggerStartGame(); });
+        retryBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); triggerStartGame(); });
+
+        window.addEventListener('mousedown', () => {
+            if (isGameActive) executeLaunch();
+        });
+        window.addEventListener('touchstart', (e) => {
+            if (isGameActive) {
+                e.preventDefault(); 
+                executeLaunch();
+            }
+        }, { passive: false }); 
+
+        function executeLaunch() {
+            if (playerObj.isFlying) return;
+
+            playSound('launch');
+            playerObj.vx = -Math.sin(playerObj.angle) * playerObj.flySpeed;
+            playerObj.vy = Math.cos(playerObj.angle) * playerObj.flySpeed;
+            playerObj.isFlying = true;
+        }
+
+        function drawGameFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isGameActive) {
+                cameraViewportY += (targetCameraViewportY - cameraViewportY) * 0.1;
+            }
+            
+            ctx.save();
+            ctx.translate(0, cameraViewportY);
+
+            // Draw Parallax Starfield Background
+            ctx.fillStyle = "#ffffff";
+            starsArray.forEach(star => {
+                let relativeY = (star.y - cameraViewportY * 0.25) % (canvas.height * 2.5);
+                if (relativeY < 0) relativeY += (canvas.height * 2.5);
+                
+                ctx.globalAlpha = star.alpha;
+                ctx.beginPath();
+                ctx.arc(star.x * (canvas.width / 500), relativeY - canvas.height, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Draw Targeting Vector Line
+            if (!playerObj.isFlying && isGameActive) {
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 6]);
+                let vectorX = -Math.sin(playerObj.angle) * 280;
+                let vectorY = Math.cos(playerObj.angle) * 280;
+                ctx.moveTo(playerObj.x, playerObj.y);
+                ctx.lineTo(playerObj.x + vectorX, playerObj.y + vectorY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw Particle Trails
+            for (let i = particlesArray.length - 1; i >= 0; i--) {
+                let p = particlesArray[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                ctx.beginPath();
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 25;
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                if (p.life <= 0) particlesArray.splice(i, 1);
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Draw Collectible Plasma Orbs
+            coinsArray.forEach(coin => {
+                if(!coin.isActive) return;
+                ctx.save();
+                ctx.beginPath();
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = "#ffb300";
+                
+                // Pulsating effect
+                let pulseSize = coin.radius + Math.sin(Date.now() * 0.01) * 1.2;
+                
+                let coinGradient = ctx.createRadialGradient(coin.x, coin.y, 1, coin.x, coin.y, pulseSize);
+                coinGradient.addColorStop(0, '#fff3cc');
+                coinGradient.addColorStop(0.4, '#ffcc00');
+                coinGradient.addColorStop(1, 'rgba(255,140,0,0)');
+                
+                ctx.fillStyle = coinGradient;
+                ctx.arc(coin.x, coin.y, pulseSize * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw Atmospheric 3D Realistic Planets
+            planetsArray.forEach((planet) => {
+                ctx.save();
+                
+                // 1. Atmosphere/Glow Layer
+                ctx.beginPath();
+                let glowGrad = ctx.createRadialGradient(planet.x, planet.y, planet.radius * 0.8, planet.x, planet.y, planet.radius * 1.3);
+                glowGrad.addColorStop(0, planet.palette.base);
+                glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = glowGrad;
+                ctx.arc(planet.x, planet.y, planet.radius * 1.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 2. Base Planet Radial Shading
+                ctx.beginPath();
+                // Shift light source coordinates slightly top-left to generate 3D spherical depth
+                let sphereGradient = ctx.createRadialGradient(
+                    planet.x - planet.radius * 0.2, planet.y - planet.radius * 0.2, planet.radius * 0.1,
+                    planet.x, planet.y, planet.radius
+                );
+                sphereGradient.addColorStop(0, planet.palette.core);
+                sphereGradient.addColorStop(0.5, planet.palette.base);
+                sphereGradient.addColorStop(1, planet.palette.shadow);
+                
+                ctx.fillStyle = sphereGradient;
+                ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 3. Planet Ring Structure Details
+                if (planet.hasRings) {
+                    ctx.strokeStyle = planet.palette.core;
+                    ctx.globalAlpha = 0.4;
+                    ctx.lineWidth = 5;
+                    ctx.save();
+                    ctx.translate(planet.x, planet.y);
+                    ctx.rotate(-Math.PI / 7); // Tilted rings
+                    ctx.scale(1.8, 0.35);     // Ellipse distortion
+                    ctx.beginPath();
+                    ctx.arc(0, 0, planet.radius * 0.8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                
+                ctx.restore();
+            });
+
+            // Draw Spaceship Capsule Capsule
+            if (isGameActive) {
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "#00ffcc";
+                
+                // Core body
+                ctx.beginPath();
+                ctx.fillStyle = "#ffffff";
+                ctx.arc(playerObj.x, playerObj.y, playerObj.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Neon Thruster Winglets
+                ctx.fillStyle = "#ab4bf2";
+                ctx.shadowColor = "#ab4bf2";
+                ctx.fillRect(playerObj.x - 12, playerObj.y - 2, 4, 4);
+                ctx.fillRect(playerObj.x + 8, playerObj.y - 2, 4, 4);
+                
+                ctx.restore();
+            }
+
+            // Draw Score Value Floating Popups
+            ctx.fillStyle = "#00ffcc";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            for (let i = popupsArray.length - 1; i >= 0; i--) {
+                let pop = popupsArray[i];
+                ctx.save();
+                ctx.globalAlpha = pop.life / 50;
+                ctx.fillText(pop.text, pop.x, pop.y);
+                ctx.restore();
+                pop.y -= 0.8;
+                pop.life--;
+                if (pop.life <= 0) popupsArray.splice(i, 1);
+            }
+
+            ctx.restore();
+
+            // --- Physics & Flight Logic Processing Loop ---
+            if (isGameActive) {
+                if (!playerObj.isFlying) {
+                    playerObj.angle += playerObj.rotationSpeed;
+                    updatePlayerCoordinatePosition();
+                } else {
+                    playerObj.x += playerObj.vx;
+                    playerObj.y += playerObj.vy;
+
+                    // Generate propulsion exhaust particles
+                    if(Math.random() > 0.2) {
+                        particlesArray.push({
+                            x: playerObj.x,
+                            y: playerObj.y,
+                            vx: (Math.random() - 0.5) * 1,
+                            vy: (Math.random() - 0.5) * 1 + 1,
+                            size: 2 + Math.random() * 3,
+                            life: 25,
+                            color: Math.random() > 0.5 ? '#00ffcc' : '#ab4bf2'
+                        });
+                    }
+
+                    // Check item overlaps
+                    coinsArray.forEach(coin => {
+                        if (coin.isActive && Math.hypot(playerObj.x - coin.x, playerObj.y - coin.y) < playerObj.size + coin.radius + 6) {
+                            coin.isActive = false;
+                            currentScore += coin.pointValue;
+                            scoreNum.innerText = currentScore;
+                            playSound('coin');
+                            popupsArray.push({ x: coin.x, y: coin.y, text: "+" + coin.pointValue, life: 40 });
+                        }
+                    });
+
+                    // Check safe planet touchdown registration
+                    for (let i = 0; i < planetsArray.length; i++) {
+                        if (i === playerObj.planetIndex) continue;
+
+                        let planet = planetsArray[i];
+                        let absoluteDistance = Math.hypot(playerObj.x - planet.x, playerObj.y - planet.y);
+
+                        // Magnified snap radius range mechanics (+55 tolerance safety)
+                        if (absoluteDistance <= planet.radius + 55) {
+                            playerObj.isFlying = false;
+                            playerObj.planetIndex = i;
+                            playerObj.angle = Math.atan2(playerObj.y - planet.y, playerObj.x - planet.x);
+                            playSound('land');
+                            
+                            currentScore += 5; 
+                            scoreNum.innerText = currentScore;
+                            popupsArray.push({ x: planet.x, y: planet.y - planet.radius - 10, text: "+5 ARRIVED", life: 50 });
+
+                            targetCameraViewportY = -planet.y + canvas.height - 250;
+                            spawnNewPlanet();
+                            break;
+                        }
+                    }
+
+                    // Track boundary thresholds relative to current base planet altitude
+                    let referencePlanet = planetsArray[playerObj.planetIndex];
+                    if (playerObj.y < referencePlanet.y - 950 || playerObj.y > referencePlanet.y + 450 || playerObj.x < -120 || playerObj.x > canvas.width + 120) {
+                        triggerGameOver();
+                    }
+                }
+            }
+
+            requestAnimationFrame(drawGameFrame);
+        }
+
+        // Run animation tick
+        drawGameFrame();
+    </script>
+</body>
+</html>
