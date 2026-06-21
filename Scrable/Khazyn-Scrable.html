@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scrabble - English</title>
+    <style>
+        * { box-sizing: border-box; }
+        
+        :root {
+            --bg-color: #1a2327; --board-bg: #0c1417; --tile-bg: #f5e9b8; --tile-text: #2c1a04;
+            --tw-color: #ff3c3c; --dw-color: #ffb4b4; --tl-color: #1d92ff; --dl-color: #8acdf9;
+            --normal-color: #31424b; --active-letter: #ffec85; --border-color: #4a5c66;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: white;
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; padding: 10px; touch-action: manipulation; 
+        }
+
+        .header { text-align: center; margin-bottom: 5px; }
+        .header h2 { margin: 5px 0; font-size: 1.5rem; color: #ffae19; }
+
+        .game-layout {
+            display: flex; gap: 15px; width: 100%; max-width: 1000px;
+            justify-content: center; flex-wrap: wrap;
+        }
+
+        .board-container {
+            background-color: #5d4037; padding: 2%; border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); width: 100%; max-width: 500px;
+        }
+
+        .board {
+            display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr);
+            gap: 1px; background-color: var(--board-bg); border: 1px solid #000;
+            width: 100%; aspect-ratio: 1 / 1; 
+        }
+
+        .square {
+            background-color: var(--normal-color); border-radius: 2px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: clamp(5px, 1.8vw, 9px); font-weight: bold; text-transform: uppercase;
+            color: rgba(255,255,255,0.6); position: relative; cursor: pointer;
+        }
+
+        .tw { background-color: var(--tw-color); color: white; }
+        .dw { background-color: var(--dw-color); color: #4a0000; }
+        .tl { background-color: var(--tl-color); color: white; }
+        .dl { background-color: var(--dl-color); color: #003366; }
+        .center-star { background-color: #ffae19; color: #2c1a04; font-size: clamp(10px, 3vw, 16px); }
+
+        .board-tile {
+            width: 100%; height: 100%; background-color: var(--tile-bg); color: var(--tile-text);
+            font-size: clamp(10px, 3.5vw, 18px); font-weight: bold; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 -2px 0 #c2b168, 0 2px 4px rgba(0,0,0,0.5);
+            position: absolute; top: 0; left: 0; z-index: 5;
+        }
+        .board-tile .val { font-size: clamp(5px, 1.5vw, 8px); position: absolute; bottom: 1px; right: 2px; }
+        .temp-tile { opacity: 0.9; border: 2px solid #ffae19; box-sizing: border-box; z-index: 6; color: #b30000; }
+
+        .side-panel { flex: 1; min-width: 300px; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+        .score-box {
+            display: flex; justify-content: space-between; background: #151c20; padding: 12px;
+            border-radius: 6px; font-weight: bold; font-size: 16px; border-left: 6px solid #ffae19;
+        }
+
+        .rack-wood {
+            background: linear-gradient(to bottom, #a0522d, #8b4513); padding: 10px; border-radius: 5px;
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.2), 0 8px 15px rgba(0,0,0,0.6);
+            border-bottom: 5px solid #5c2d16; margin: 5px 0; display: flex; justify-content: center; gap: 6px; 
+        }
+
+        .rack-tile {
+            width: clamp(35px, 10vw, 45px); height: clamp(35px, 10vw, 45px);
+            background-color: var(--tile-bg); color: var(--tile-text);
+            font-weight: bold; font-size: clamp(16px, 5vw, 22px); border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: 0.1s;
+        }
+        .rack-tile.selected { border: 3px solid #ffae19; background-color: var(--active-letter); transform: translateY(-4px); }
+        .rack-tile.used { opacity: 0.2; pointer-events: none; }
+        .rack-tile .val { font-size: clamp(7px, 2vw, 9px); position: absolute; bottom: 2px; right: 4px; }
+
+        .btn-group { display: flex; gap: 5px; }
+        .btn-group button {
+            flex: 1; padding: 10px; font-size: 12px; font-weight: bold;
+            border-radius: 4px; cursor: pointer; border: none; color: white;
+        }
+        .btn-submit { background: #ffae19; color: #2a1902 !important; }
+        .btn-recall { background: #ea4d3d; }
+        .btn-save { background: #4cd137; }
+
+        .log-box { background: #151c20; height: 110px; overflow-y: auto; border-radius: 6px; padding: 10px; font-size: 12px; color: #b4c6d1; border: 1px solid var(--border-color); }
+        .info-panel { background: #151c20; border-radius: 6px; padding: 10px; border: 1px solid var(--border-color); }
+        .info-panel h4 { margin: 0 0 5px 0; color: #ffae19; font-size: 13px; }
+        #word-def-log { max-height: 100px; overflow-y: auto; font-size: 11px; color: #ddd; }
+        .def-item { border-bottom: 1px solid #2a363d; padding-bottom: 4px; margin-bottom: 4px; }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #4a5c66; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="header"><h2>Scrable</h2></div>
+
+    <div class="game-layout">
+        <div class="board-container"><div class="board" id="scrabble-board"></div></div>
+
+        <div class="side-panel">
+            <div class="score-box">
+                <div style="color: #4cd137;">Player: <span id="p-score">0</span></div>
+                <div style="color: #ff4757;">NPC: <span id="n-score">0</span></div>
+            </div>
+            
+            <div id="turn-txt" style="text-align:center; font-weight:bold; color:#ffae19;">Your Turn!</div>
+            <div style="font-size: 11px; color: #b4c6d1; text-align: center;">Tap a rack tile, then tap an empty board cell.<br>Words will connect automatically!</div>
+            
+            <div class="rack-wood" id="rack-box"></div>
+
+            <div class="btn-group">
+                <button class="btn-submit" id="sub-btn" onclick="submitTurn()">Verify Word</button>
+                <button class="btn-recall" onclick="recallTiles()">Recall</button>
+                <button class="btn-save" onclick="saveScore()">Save</button>
+            </div>
+
+            <div class="info-panel">
+                <h4>Definitions</h4>
+                <div id="word-def-log"><em style="color:#7a8a94;">Word meanings appear here...</em></div>
+            </div>
+            
+            <div class="log-box" id="log-box"><div>[System] Game started. First word MUST touch the center ★.</div></div>
+        </div>
+    </div>
+
+    <script>
+        const charVals = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
+        const TW = ["0,0","0,7","0,14","7,0","7,14","14,0","14,7","14,14"];
+        const DW = ["1,1","2,2","3,3","4,4","1,13","2,12","3,11","4,10","13,1","12,2","11,3","10,4","13,13","12,12","11,11","10,10"];
+        const TL = ["1,5","1,9","5,1","5,5","5,9","5,13","9,1","9,5","9,9","9,13","13,5","13,9"];
+        const DL = ["0,3","0,11","2,6","2,8","3,0","3,7","3,14","6,2","6,6","6,8","6,12","7,3","7,11","8,2","8,6","8,8","8,12","11,0","11,7","11,14","12,6","12,8","14,3","14,11"];
+
+        let grid = Array(15).fill().map(() => Array(15).fill(null));
+        let rack = [];
+        let selectedRackIdx = null;
+        let isPlayerTurn = true;
+        let isFirstTurn = true;
+        let playedWords = new Set();
+        let pScore = parseInt(localStorage.getItem('scrabbleScore')) || 0;
+        let nScore = 0;
+
+        document.getElementById('p-score').innerText = pScore;
+
+        function initBoard() {
+            const board = document.getElementById('scrabble-board');
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    const sq = document.createElement('div');
+                    let coord = `${r},${c}`;
+                    if (r === 7 && c === 7) sq.className = 'square center-star';
+                    else if (TW.includes(coord)) sq.className = 'square tw';
+                    else if (DW.includes(coord)) sq.className = 'square dw';
+                    else if (TL.includes(coord)) sq.className = 'square tl';
+                    else if (DL.includes(coord)) sq.className = 'square dl';
+                    else sq.className = 'square';
+                    
+                    if(r===7&&c===7) sq.innerText = '★';
+                    else if (sq.className.includes('tw')) sq.innerText = 'TW';
+                    else if (sq.className.includes('dw')) sq.innerText = 'DW';
+                    else if (sq.className.includes('tl')) sq.innerText = 'TL';
+                    else if (sq.className.includes('dl')) sq.innerText = 'DL';
+
+                    sq.id = `cell-${r}-${c}`;
+                    sq.onclick = () => handleBoardClick(r, c);
+                    board.appendChild(sq);
+                }
+            }
+        }
+
+        function fillRack() {
+            const letters = "AAAAAAAAABBCCDDDDEEEEEEEEEEEEFFGGGHHIIIIIIIIIJKLLLLMMNNNNNNOOOOOOOOPPQRRRRRRSSSSTTTTTTUUUUVVWWXYYZ";
+            while (rack.length < 7) {
+                rack.push({ char: letters[Math.floor(Math.random() * letters.length)], used: false, tempR: null, tempC: null });
+            }
+            renderRack();
+        }
+
+        function renderRack() {
+            const box = document.getElementById('rack-box');
+            box.innerHTML = '';
+            rack.forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.className = `rack-tile ${item.used ? 'used' : ''} ${selectedRackIdx === idx ? 'selected' : ''}`;
+                div.innerHTML = `${item.char}<span class="val">${charVals[item.char]}</span>`;
+                div.onclick = () => {
+                    if (!item.used && isPlayerTurn) {
+                        selectedRackIdx = selectedRackIdx === idx ? null : idx;
+                        renderRack();
+                    }
+                };
+                box.appendChild(div);
+            });
+        }
+
+        function handleBoardClick(r, c) {
+            if (!isPlayerTurn) return;
+            const cell = document.getElementById(`cell-${r}-${c}`);
+
+            // Return temp tile to rack
+            if (grid[r][c] && grid[r][c].isTemp) {
+                let rackIdx = grid[r][c].rackIdx;
+                rack[rackIdx].used = false; rack[rackIdx].tempR = null; rack[rackIdx].tempC = null;
+                grid[r][c] = null;
+                cell.querySelector('.board-tile').remove();
+                renderRack();
+                return;
+            }
+
+            // Place tile
+            if (selectedRackIdx !== null && !grid[r][c]) {
+                grid[r][c] = { char: rack[selectedRackIdx].char, isTemp: true, rackIdx: selectedRackIdx };
+                rack[selectedRackIdx].used = true; rack[selectedRackIdx].tempR = r; rack[selectedRackIdx].tempC = c;
+                
+                const tileHtml = document.createElement('div');
+                tileHtml.className = 'board-tile temp-tile';
+                tileHtml.innerHTML = `${rack[selectedRackIdx].char}<span class="val">${charVals[rack[selectedRackIdx].char]}</span>`;
+                cell.appendChild(tileHtml);
+                
+                selectedRackIdx = null;
+                renderRack();
+            }
+        }
+
+        function recallTiles() {
+            rack.forEach(item => {
+                if(item.used && item.tempR !== null) {
+                    item.used = false;
+                    document.getElementById(`cell-${item.tempR}-${item.tempC}`).querySelector('.board-tile').remove();
+                    grid[item.tempR][item.tempC] = null;
+                    item.tempR = null; item.tempC = null;
+                }
+            });
+            selectedRackIdx = null; renderRack();
+        }
+
+        // --- VALIDATION ENGINE ---
+        async function submitTurn() {
+            let temps = [];
+            for(let r=0; r<15; r++) for(let c=0; c<15; c++) if(grid[r][c] && grid[r][c].isTemp) temps.push({r, c});
+            
+            if (temps.length === 0) return alert("Place at least 1 tile!");
+
+            let isH = temps.every(t => t.r === temps[0].r);
+            let isV = temps.every(t => t.c === temps[0].c);
+            if (!isH && !isV && temps.length > 1) return alert("Tiles must be placed in a straight line!");
+
+            if (isFirstTurn) {
+                if (!temps.some(t => t.r === 7 && t.c === 7)) return alert("First word MUST touch the center star!");
+            } else {
+                let connected = false;
+                for(let t of temps) {
+                    let neighbors = [[t.r-1, t.c], [t.r+1, t.c], [t.r, t.c-1], [t.r, t.c+1]];
+                    for(let [nr, nc] of neighbors) {
+                        if (nr>=0 && nr<15 && nc>=0 && nc<15 && grid[nr][nc] && !grid[nr][nc].isTemp) connected = true;
+                    }
+                }
+                if(!connected) return alert("Tiles MUST connect to existing words on the board!");
+            }
+
+            if (isH) {
+                let minC = Math.min(...temps.map(t=>t.c)), maxC = Math.max(...temps.map(t=>t.c));
+                for(let c=minC; c<=maxC; c++) if(!grid[temps[0].r][c]) return alert("No empty gaps allowed inside the word!");
+            } else if (isV) {
+                let minR = Math.min(...temps.map(t=>t.r)), maxR = Math.max(...temps.map(t=>t.r));
+                for(let r=minR; r<=maxR; r++) if(!grid[r][temps[0].c]) return alert("No empty gaps allowed inside the word!");
+            }
+
+            let wordsFormed = [];
+            function extractWord(r, c, isHorizontal) {
+                let start = isHorizontal ? c : r;
+                while (start > 0 && (isHorizontal ? grid[r][start-1] : grid[start-1][c])) start--;
+                let wordInfo = { text: "", tiles: [] };
+                let curr = start;
+                while (curr < 15 && (isHorizontal ? grid[r][curr] : grid[curr][c])) {
+                    let tileR = isHorizontal ? r : curr;
+                    let tileC = isHorizontal ? curr : c;
+                    wordInfo.text += grid[tileR][tileC].char;
+                    wordInfo.tiles.push({ r: tileR, c: tileC, isTemp: grid[tileR][tileC].isTemp, char: grid[tileR][tileC].char });
+                    curr++;
+                }
+                return wordInfo;
+            }
+
+            let mainWord = extractWord(temps[0].r, temps[0].c, isH);
+            if(mainWord.text.length > 1) wordsFormed.push(mainWord);
+
+            for(let t of temps) {
+                let crossWord = extractWord(t.r, t.c, !isH);
+                if(crossWord.text.length > 1) wordsFormed.push(crossWord);
+            }
+
+            // BUG FIX 1: Memblokir penempatan 1 huruf di giliran pertama
+            if (wordsFormed.length === 0) return alert("You must form a word of at least 2 letters!");
+
+            document.getElementById('sub-btn').disabled = true;
+            for(let w of wordsFormed) {
+                if(playedWords.has(w.text)) {
+                    document.getElementById('sub-btn').disabled = false;
+                    return alert(`The word "${w.text}" has already been played!`);
+                }
+                if (!await validateWithAPI(w.text)) {
+                    document.getElementById('sub-btn').disabled = false;
+                    return alert(`Invalid English word detected: "${w.text}"`);
+                }
+            }
+
+            let turnScore = 0;
+            wordsFormed.forEach(w => {
+                let wordMultiplier = 1;
+                let wordScore = 0;
+                w.tiles.forEach(t => {
+                    let ltrScore = charVals[t.char];
+                    if (t.isTemp) {
+                        let coord = `${t.r},${t.c}`;
+                        if (TL.includes(coord)) ltrScore *= 3;
+                        if (DL.includes(coord)) ltrScore *= 2;
+                        if (TW.includes(coord)) wordMultiplier *= 3;
+                        if (DW.includes(coord) || (t.r===7 && t.c===7)) wordMultiplier *= 2;
+                    }
+                    wordScore += ltrScore;
+                });
+                turnScore += (wordScore * wordMultiplier);
+                playedWords.add(w.text);
+                getDefinition(w.text, 'Player');
+            });
+
+            pScore += turnScore; document.getElementById('p-score').innerText = pScore;
+            logMsg(`<span style="color:#4cd137;">[Player] Scored ${turnScore} points!</span>`);
+            
+            temps.forEach(t => {
+                grid[t.r][t.c].isTemp = false;
+                let tileEl = document.getElementById(`cell-${t.r}-${t.c}`).querySelector('.board-tile');
+                tileEl.classList.remove('temp-tile');
+                tileEl.style.color = "var(--tile-text)";
+            });
+
+            isFirstTurn = false;
+            rack = rack.filter(item => !item.used); fillRack();
+            
+            isPlayerTurn = false;
+            document.getElementById('turn-txt').innerHTML = "NPC is thinking...";
+            document.getElementById('turn-txt').style.color = "#ff4757";
+            setTimeout(npcTurn, 2000);
+        }
+
+        async function validateWithAPI(word) {
+            let localValid = ["THE","AND","FOR","ARE","BUT","NOT","YOU","ALL","ANY","CAN","HAD","HER","WAS","ONE","OUR","OUT","DAY","GET","HAS","HIM","HOW","MAN","NEW","NOW","SEE","TWO","WAY","WHO","BOY","DID","ITS","LET","PUT","SAY","SHE","TOO","ACT","AIR","ART","BAD","BIG","BIT","CAR","CRY","CUT","EAR","EAT","END","EYE","FAN","FAR","FLY","GAS","GOD","HIT","HOT","ICE","JOB","KEY","LAW","LIE","LOT","MAP","MET","NET","OIL","OLD","OWN","PEN","PIE","RED","RUN","SAT","SEA","SON","SUN","TAX","TEA","TIE","TOP","TRY","YES","BOX","ON","NO","IN","TO","DO","GO","SO","UP","HE","WE","ME","US","AS","AT","BE","BY","IF","IS","IT","OF","OR","OX","PI"];
+            if(localValid.includes(word)) return true;
+            try {
+                let res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                return res.ok;
+            } catch { return true; } 
+        }
+
+        async function getDefinition(word, player) {
+            let box = document.getElementById('word-def-log');
+            if(box.innerText.includes('meanings appear here')) box.innerHTML = '';
+            let col = player==='Player'?'#4cd137':'#ff4757';
+            try {
+                let res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                if(res.ok) {
+                    let d = await res.json();
+                    box.innerHTML = `<div class="def-item"><strong style="color:${col}">[${player}]</strong> <b>${word}</b>: ${d[0].meanings[0].definitions[0].definition}</div>` + box.innerHTML;
+                }
+            } catch(e){}
+        }
+
+        function saveScore() {
+            localStorage.setItem('scrabbleScore', pScore);
+            alert("Score saved successfully!");
+        }
+
+        function logMsg(msg) {
+            const b = document.getElementById('log-box');
+            b.innerHTML += `<div>${msg}</div>`; b.scrollTop = b.scrollHeight;
+        }
+
+        // --- BUG FIX 2: MATA KUDA NPC DIPERBAIKI ---
+        function npcTurn() {
+            const botDict = ["BOT", "DATA", "NET", "WEB", "CODE", "APP", "NODE", "LOG", "TEST", "API", "DEV", "BUG", "FIX", "RUN", "CMD"];
+            let placed = false;
+
+            let boardLetters = [];
+            for(let r=0; r<15; r++) for(let c=0; c<15; c++) if(grid[r][c]) boardLetters.push({r, c, char: grid[r][c].char});
+            boardLetters.sort(() => Math.random() - 0.5);
+
+            npcSearch: for(let cell of boardLetters) {
+                for(let word of botDict) {
+                    if(playedWords.has(word)) continue;
+                    
+                    if(word.startsWith(cell.char)) {
+                        let fits = true;
+                        let wordLen = word.length;
+                        
+                        // Cek apakah bot melebihi batas papan
+                        if (cell.c + wordLen - 1 > 14) fits = false;
+                        else {
+                            // Fix: Bot mengecek ujung kiri dan kanan agar tidak salah sambung
+                            if (cell.c > 0 && grid[cell.r][cell.c - 1]) fits = false; 
+                            if (cell.c + wordLen < 15 && grid[cell.r][cell.c + wordLen]) fits = false;
+                            
+                            if (fits) {
+                                for(let i=1; i<wordLen; i++) {
+                                    let currC = cell.c + i;
+                                    if(grid[cell.r][currC]) { fits = false; break; }
+                                    if(cell.r>0 && grid[cell.r-1][currC]) { fits = false; break; }
+                                    if(cell.r<14 && grid[cell.r+1][currC]) { fits = false; break; }
+                                }
+                            }
+                        }
+
+                        if(fits) {
+                            let pts = charVals[cell.char]; 
+                            let mult = 1;
+                            for(let i=1; i<wordLen; i++) {
+                                let currC = cell.c + i;
+                                grid[cell.r][currC] = { char: word[i], isTemp: false };
+                                let uiSq = document.getElementById(`cell-${cell.r}-${currC}`);
+                                uiSq.innerHTML += `<div class="board-tile">${word[i]}<span class="val">${charVals[word[i]]}</span></div>`;
+                                
+                                let lPts = charVals[word[i]];
+                                let coord = `${cell.r},${currC}`;
+                                if(TL.includes(coord)) lPts*=3; if(DL.includes(coord)) lPts*=2;
+                                if(TW.includes(coord)) mult*=3; if(DW.includes(coord) || (cell.r===7 && currC===7)) mult*=2;
+                                pts += lPts;
+                            }
+                            nScore += (pts * mult);
+                            document.getElementById('n-score').innerText = nScore;
+                            playedWords.add(word); getDefinition(word, 'NPC');
+                            logMsg(`<span style="color:#ff8a8a;">[NPC] Played "${word}" (+${pts*mult} pts)</span>`);
+                            placed = true;
+                            break npcSearch;
+                        }
+                    }
+                }
+            }
+
+            if(!placed) logMsg(`<span style="color:#ff8a8a;">[NPC] Passed turn.</span>`);
+            
+            isPlayerTurn = true;
+            document.getElementById('sub-btn').disabled = false;
+            document.getElementById('turn-txt').innerHTML = "Your Turn!";
+            document.getElementById('turn-txt').style.color = "#ffae19";
+        }
+
+        window.onload = () => { initBoard(); fillRack(); };
+    </script>
+</body>
+</html>
